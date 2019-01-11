@@ -47,7 +47,7 @@ public class Checker extends AbstractActor {
             total += size;
         }
         System.err.println("总共" + total + "个红包");
-        System.err.println("总共" + threadNames.size() + "条线程:" + JSONObject.toJSON(threadNames));
+        System.err.println("总共" + threadNames.size() + "个Dispatcher:" + JSONObject.toJSON(threadNames));
         super.postStop();
     }
 
