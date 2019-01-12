@@ -17,10 +17,24 @@
         <akka-http.version>10.0.10</akka-http.version>
         <akka.compat>0.7.0</akka.compat>
         <akka.test>2.5.9</akka.test>
+        <akka.contrib>2.3.6</akka.contrib>
     </properties>
 
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-cluster -->
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-cluster_${scala}</artifactId>
+            <version>${akka.version}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-contrib -->
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-contrib_${scala}</artifactId>
+            <version>${akka.contrib}</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/com.alibaba/fastjson -->
         <dependency>
             <groupId>com.alibaba</groupId>
