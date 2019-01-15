@@ -3,28 +3,20 @@ package chat.client;
 import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
+import akka.actor.Props;
 import akka.contrib.pattern.ClusterClient;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
-import chat.msg.CSMessage;
-import chat.msg.MsgData;
-import chat.msg.SimpleMsg;
+import chat.msg.C2SMsgs;
 import com.typesafe.config.ConfigFactory;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.ServerSocket;
 import java.net.UnknownHostException;
-import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * author yg
@@ -41,13 +33,10 @@ public class ClientMain {
         initialContacts.add(system.actorSelection("akka.tcp://chatRoom@127.0.0.1:2552/user/receptionist"));
         initialContacts.add(system.actorSelection("akka.tcp://chatRoom@127.0.0.1:2551/user/receptionist"));
         ActorRef receptionist = system.actorOf(ClusterClient.defaultProps(initialContacts), "client"); //客户端节点
-        System.err.println(receptionist.path().toString());
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-//        Patterns.ask(receptionist, new ClusterClient.SendToAll("/user/workers", new SimpleMsg.RegisterMsg()), timeout);//注册客户端
-//        ActorRef actorRef = system.actorOf(Props.create(Player.class));
         ExecutorService service = Executors.newSingleThreadExecutor();
-        Timeout timeout1 = new Timeout(500, TimeUnit.MILLISECONDS);
-        service.submit(new Runnable() {
+        /*Timeout timeout1 = new Timeout(500, TimeUnit.MILLISECONDS);
+        service.submit(new Runnable() {//轮询,最差的方法
             @Override
             public void run() {
                 long time = new Date().getTime();
@@ -71,8 +60,21 @@ public class ClientMain {
                     }
                 }
             }
-        });
-        Timeout timeout = new Timeout(Duration.create(5, "seconds"));
+        });*/
+        ActorRef player = system.actorOf(Props.create(Player.class), "player");
+        //注册客户端
+        final String addr = getAddr();
+        System.err.println(addr);
+//        try {
+//            Thread.sleep(10000*1000);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+        final String remoteRouter = "/user/workers";
+        ClusterClient.Send msg = new ClusterClient.Send(remoteRouter, new C2SMsgs.RegisterClient(addr));
+        receptionist.tell(msg, player);
+
+        //读取输入
         service.submit(new Runnable() {
             @Override
             public void run() {
@@ -83,8 +85,8 @@ public class ClientMain {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    ClusterClient.Send msg = new ClusterClient.Send("/user/workers", new CSMessage(content), false);
-                    Patterns.ask(receptionist, msg, timeout);
+                    ClusterClient.Send msg = new ClusterClient.Send(remoteRouter, new C2SMsgs.CSMessage(content, addr), false);
+                    receptionist.tell(msg, receptionist);
                 }
                 try {
                     in.close();
@@ -95,5 +97,26 @@ public class ClientMain {
                 System.exit(0);
             }
         });
+    }
+
+    private static String getAddr() {
+        ServerSocket serverSocket = null; //读取空闲的可用端口
+        String localIp = null;
+        int port = -1;
+        try {
+            serverSocket = new ServerSocket(0);
+            localIp = serverSocket.getInetAddress().getLocalHost().getHostAddress();
+            port = serverSocket.getLocalPort();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                serverSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+//      return localIp + ":" + port;
+        return "127.0.0.1" + ":" + port;
     }
 }

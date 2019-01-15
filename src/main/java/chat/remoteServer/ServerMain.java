@@ -14,9 +14,8 @@ import com.typesafe.config.ConfigFactory;
  */
 public class ServerMain {
     public static void main(String[] args) {//-Dcom.sum.management.jmxremote.port=9552
-        ActorSystem actorSystem = ActorSystem.create("chatRoom", ConfigFactory.load("chat2-application"));
+        ActorSystem actorSystem = ActorSystem.create("chatRoom", ConfigFactory.load("chat1-application"));
         ActorRef roomManager = actorSystem.actorOf(Props.create(RoomsManager.class), "roomManager");
-        System.err.println(roomManager.path().toString());
         ActorRef workers = actorSystem.actorOf(new BalancingPool(8).props(Props.create(ChatRoom.class, roomManager.path().toString())), "workers");
         ((ClusterReceptionistExtension) akka.contrib.pattern.ClusterReceptionistExtension.apply(actorSystem)).registerService(workers);
     }

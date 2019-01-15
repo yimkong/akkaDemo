@@ -2,11 +2,8 @@ package chat.remoteServer;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorSelection;
-import akka.cluster.Cluster;
 import akka.japi.pf.ReceiveBuilder;
-import chat.msg.CSMessage;
-import chat.msg.MsgData;
-import chat.msg.SimpleMsg;
+import chat.msg.C2SMsgs;
 import scala.PartialFunction;
 import scala.runtime.BoxedUnit;
 
@@ -18,7 +15,6 @@ import java.util.Date;
  * date 2019/1/11
  */
 public class ChatRoom extends AbstractActor {
-    Cluster cluster = Cluster.get(getContext().system());
     private final ActorSelection roomsManagerRef;
 
     public ChatRoom(String roomsManagerRef) {
@@ -27,14 +23,10 @@ public class ChatRoom extends AbstractActor {
 
     @Override
     public PartialFunction<Object, BoxedUnit> receive() {
-        return ReceiveBuilder.match(CSMessage.class, msg -> {
+        return ReceiveBuilder.match(C2SMsgs.CSMessage.class, msg -> {
             System.err.println(msg.getContent());
-            roomsManagerRef.forward(new MsgData(msg, new Date().getTime()), context());
-        }).match(SimpleMsg.class, msg -> {
-            roomsManagerRef.forward(msg, context());
-        }).match(SimpleMsg.RegisterMsg.class, msg -> {
-            roomsManagerRef.forward(msg, context());
-        }).match(SimpleMsg.RequestMsg.class, msg -> {
+            roomsManagerRef.forward(new C2SMsgs.MsgData(msg, new Date().getTime()), context());
+        }).match(C2SMsgs.RegisterClient.class, msg -> {
             roomsManagerRef.forward(msg, context());
         })
                 .build();
