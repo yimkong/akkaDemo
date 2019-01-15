@@ -65,11 +65,6 @@ public class ClientMain {
         //注册客户端
         final String addr = getAddr();
         System.err.println(addr);
-//        try {
-//            Thread.sleep(10000*1000);
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
         final String remoteRouter = "/user/workers";
         ClusterClient.Send msg = new ClusterClient.Send(remoteRouter, new C2SMsgs.RegisterClient(addr));
         receptionist.tell(msg, player);
