@@ -47,43 +47,55 @@ public class Player extends AbstractFSM<State, EventQueue> {
                             log.debug("玩家[{}]离线被攻击!", modelInfo);
                             sender().tell(new Disconnected(), self());
                             return stay();
-                        }).event(GetStatus.class, (x, t) -> {
-                    sender().tell(stateName().toString(), self());
-                    return stay();
-                })
+                        })
+                        .event(GetStatus.class, (x, t) -> {
+                            sender().tell(stateName().toString(), self());
+                            return stay();
+                        })
         );
         when(HANG, matchEvent(OfflineMsg.class, (msg, container) -> {
-            log.debug("玩家[{}]从挂机离线!", modelInfo);
-            return goTo(DISCONNECTED);
-        })
-                .event(Attack.class, (msg, container) -> {
-                    log.debug("玩家[{}]从挂机进入战斗!", modelInfo);
-                    boolean ifDead = beAttackAndFightBack(modelInfo, msg);
-                    if (ifDead) {
-                        sender().tell(new FightReport(), self());
-                        return stay();
-                    }
-                    return goTo(FIGHTING);
-                }));
-        when(FIGHTING, matchEvent(OfflineMsg.class, (msg, container) -> {
-            log.debug("玩家[{}]从战斗离线!", modelInfo);
-            return goTo(DISCONNECTED);
-        })
-                .event(Attack.class, (msg, container) -> {
-                    log.debug("玩家[{}]被攻击自动反击!", modelInfo);
-                    boolean ifDead = beAttackAndFightBack(modelInfo, msg);
-                    if (ifDead) {
-                        sender().tell(new FightReport(), self());
-                        this.modelInfo = ModelInfo.valueOf(modelInfo);
-                        return stay();
-                    }
-                    return stay();
+                    log.debug("玩家[{}]从挂机离线!", modelInfo);
+                    return goTo(DISCONNECTED);
                 })
-                .event(FightReport.class, (msg, container) -> {
-                    log.debug("玩家[{}]结束战斗!", modelInfo);
-                    this.modelInfo = ModelInfo.valueOf(modelInfo);
-                    return goTo(HANG);
-                }));
+                        .event(Attack.class, (msg, container) -> {
+                            log.debug("玩家[{}]从挂机进入战斗!", modelInfo);
+                            boolean ifDead = beAttackAndFightBack(modelInfo, msg);
+                            if (ifDead) {
+                                sender().tell(new FightReport(), self());
+                                return stay();
+                            }
+                            return goTo(FIGHTING);
+                        })
+                        .event(GetStatus.class, (x, t) -> {
+                            sender().tell(stateName().toString(), self());
+                            return stay();
+                        })
+        )
+        ;
+        when(FIGHTING, matchEvent(OfflineMsg.class, (msg, container) -> {
+                    log.debug("玩家[{}]从战斗离线!", modelInfo);
+                    return goTo(DISCONNECTED);
+                })
+                        .event(Attack.class, (msg, container) -> {
+                            log.debug("玩家[{}]被攻击自动反击!", modelInfo);
+                            boolean ifDead = beAttackAndFightBack(modelInfo, msg);
+                            if (ifDead) {
+                                sender().tell(new FightReport(), self());
+                                this.modelInfo = ModelInfo.valueOf(modelInfo);
+                                return stay();
+                            }
+                            return stay();
+                        })
+                        .event(FightReport.class, (msg, container) -> {
+                            log.debug("玩家[{}]结束战斗!", modelInfo);
+                            this.modelInfo = ModelInfo.valueOf(modelInfo);
+                            return goTo(HANG);
+                        })
+                        .event(GetStatus.class, (x, t) -> {
+                            sender().tell(stateName().toString(), self());
+                            return stay();
+                        })
+        );
 
         initialize();
     }
