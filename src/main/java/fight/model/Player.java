@@ -7,12 +7,10 @@ import akka.event.LoggingAdapter;
 import fight.msg.Attack;
 import fight.msg.Disconnected;
 import fight.msg.FightReport;
-import fight.msg.playerMsg.GetStatus;
-import fight.msg.playerMsg.LoginMsg;
-import fight.msg.playerMsg.OfflineMsg;
-import fight.msg.playerMsg.PlayerCommand;
+import fight.msg.playerMsg.*;
 
 import java.util.LinkedList;
+import java.util.Random;
 
 import static fight.model.State.*;
 
@@ -52,6 +50,7 @@ public class Player extends AbstractFSM<State, EventQueue> {
                             sender().tell(stateName().toString(), self());
                             return stay();
                         })
+                        .event(OfflineMsg.class, (msg, container) -> stay())
         );
         when(HANG, matchEvent(OfflineMsg.class, (msg, container) -> {
                     log.debug("玩家[{}]从挂机离线!", modelInfo);
@@ -70,8 +69,7 @@ public class Player extends AbstractFSM<State, EventQueue> {
                             sender().tell(stateName().toString(), self());
                             return stay();
                         })
-        )
-        ;
+        );
         when(FIGHTING, matchEvent(OfflineMsg.class, (msg, container) -> {
                     log.debug("玩家[{}]从战斗离线!", modelInfo);
                     return goTo(DISCONNECTED);
@@ -83,6 +81,13 @@ public class Player extends AbstractFSM<State, EventQueue> {
                                 sender().tell(new FightReport(), self());
                                 this.modelInfo = ModelInfo.valueOf(modelInfo);
                                 return stay();
+                            }
+                            //设置小概率逃跑
+                            Random random = new Random();
+                            double i = random.nextDouble();
+                            if (i < 0.2) {
+                                sender().tell(new PlayerEscape(), self());
+                                goTo(HANG);
                             }
                             return stay();
                         })

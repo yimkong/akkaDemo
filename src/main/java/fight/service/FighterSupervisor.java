@@ -51,12 +51,12 @@ public class FighterSupervisor extends AbstractActor {
         int id = 1;
         String thisRef = context().self().path().toString();
         for (int i = 0; i < pNum; i++) {
-            ActorRef actorRef = context().actorOf(Props.create(Player.class, thisRef, getModelInfo(id)));
+            ActorRef actorRef = context().actorOf(Props.create(Player.class, thisRef, getModelInfo(id, 50)));
             id++;
             pList.add(actorRef);
         }
         for (int i = 0; i < mNum; i++) {
-            ActorRef actorRef = context().actorOf(Props.create(Monster.class, thisRef, getModelInfo(id)));
+            ActorRef actorRef = context().actorOf(Props.create(Monster.class, thisRef, getModelInfo(id, 200)));
             id++;
             mList.add(actorRef);
         }
@@ -82,8 +82,8 @@ public class FighterSupervisor extends AbstractActor {
         }, context().system().dispatcher());
     }
 
-    private Object getModelInfo(int id) {
-        return new ModelInfo(id, 1000, new Random().nextInt(50), 1000);
+    private Object getModelInfo(int id, int attackMax) {
+        return new ModelInfo(id, 1000, new Random().nextInt(attackMax), 1000);
     }
 
     @Override
@@ -100,7 +100,6 @@ public class FighterSupervisor extends AbstractActor {
                                     return null;
                                 }
                                 sender.tell(new PlayerFound(actorRef.path().toString()), self);
-                                System.err.println(sender());
                             }
                             return null;
                         });
@@ -115,7 +114,6 @@ public class FighterSupervisor extends AbstractActor {
     public SupervisorStrategy supervisorStrategy() {
         return new OneForOneStrategy(5, Duration.create("1 minute"),
                 akka.japi.pf.DeciderBuilder
-
                         .matchAny(e -> SupervisorStrategy.escalate()).build());
     }
 }
