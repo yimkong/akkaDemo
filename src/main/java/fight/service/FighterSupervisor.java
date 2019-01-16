@@ -64,8 +64,10 @@ public class FighterSupervisor extends AbstractActor {
         List<Object> objList = new LinkedList<>();
         objList.add(new LoginMsg());
         objList.add(new OfflineMsg());
+        for (ActorRef actorRef : pList) {
+            actorRef.tell(new LoginMsg(), ActorRef.noSender());
+        }
         Random r = new Random();
-
         context().system().scheduler().schedule(Timeout.zero().duration(), Timeout.apply(5000, TimeUnit.MILLISECONDS).duration(), new Runnable() {
             @Override
             public void run() {
@@ -88,14 +90,17 @@ public class FighterSupervisor extends AbstractActor {
     public PartialFunction<Object, BoxedUnit> receive() {
         return ReceiveBuilder
                 .match(SearchMsg.class, msg -> {
+                    ActorRef sender = sender();
+                    ActorRef self = self();
                     for (ActorRef actorRef : pList) {
                         CompletionStage completionStage = toJava(ask(actorRef, new GetStatus(), Timeout.apply(500, TimeUnit.MILLISECONDS)));
                         completionStage.handle((m, t) -> {
                             if (m instanceof String) {
-                                if (!m.equals(State.HANG)) {
+                                if (!m.equals(State.HANG.toString())) {
                                     return null;
                                 }
-                                sender().tell(new PlayerFound(actorRef.path().toString()), self());
+                                sender.tell(new PlayerFound(actorRef.path().toString()), self);
+                                System.err.println(sender());
                             }
                             return null;
                         });

@@ -8,7 +8,6 @@ import akka.util.Timeout;
 import fight.msg.Attack;
 import fight.msg.Disconnected;
 import fight.msg.FightReport;
-import fight.msg.monsterMsg.AttackPlayer;
 import fight.msg.monsterMsg.Patrolling;
 import fight.msg.monsterMsg.PlayerFound;
 import fight.msg.monsterMsg.SearchMsg;
@@ -78,12 +77,10 @@ public class Monster extends AbstractActor {
                                 context().become(fighting);
                                 self().forward(msg, context());
                                 beginAttack(((PlayerFound) msg).getPlayerRef());
-                            } else {
-                                schedulePatrol();
+                                return null;
                             }
-                        } else {
-                            schedulePatrol();
                         }
+                        schedulePatrol();
                         return null;
                     });
                 })
@@ -171,7 +168,7 @@ public class Monster extends AbstractActor {
         fightScheduler = system.scheduler().schedule(Timeout.zero().duration(), Timeout.apply(attackInterval, TimeUnit.MILLISECONDS).duration(), new Runnable() {
             @Override
             public void run() {
-                actorSelection.tell(new AttackPlayer(modelInfo.getAttack()), self());
+                actorSelection.tell(new Attack(modelInfo.getAttack()), self());
             }
         }, system.dispatcher());
 

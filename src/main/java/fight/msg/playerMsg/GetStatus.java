@@ -5,5 +5,5 @@ package fight.msg.playerMsg;
  * description
  * date 2019/1/16
  */
-public class GetStatus {
+public class GetStatus implements PlayerCommand {
 }
