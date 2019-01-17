@@ -79,7 +79,7 @@ public class FighterSupervisor extends AbstractActor {
 
     private Object getModelInfo(int id, int attackMax) {
         Random random = new Random();
-        return new ModelInfo(id, 1000, 40 + random.nextInt(attackMax), 1000);
+        return new ModelInfo(id, 1000, 200 + random.nextInt(attackMax), 1000);
     }
 
     @Override
@@ -100,12 +100,12 @@ public class FighterSupervisor extends AbstractActor {
         return new OneForOneStrategy(5, Duration.create("1 minute"),
                 akka.japi.pf.DeciderBuilder
                         .match(FatalException.class, e -> {//销毁掉重启一个actor
-                            log.error("监督者收到[{}]致命异常,重启actor", e.getRef());
+                            System.err.println("监督者收到" + e.getRef() + "致命异常,重启actor");
                             return SupervisorStrategy.restart();
                         })
                         .match(FatalException.class, e -> SupervisorStrategy.stop())//暂停工作
                         .match(MyRuntimeException.class, e -> {//继续工作
-                            log.error("监督者收到[{}]运行时异常,继续工作", e.getRef());
+                            System.err.println("监督者收到" + e.getRef() + "运行时异常,继续工作");
                             return SupervisorStrategy.resume();
                         })
                         .matchAny(e -> SupervisorStrategy.escalate()).build());//向上级反馈

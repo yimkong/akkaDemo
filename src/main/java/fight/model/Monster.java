@@ -126,6 +126,10 @@ public class Monster extends AbstractActor {
                     outOfFight();
                     log.debug("玩家[{}]掉线,怪物[{}]继续巡逻", sender().path().toString(), modelInfo);
                 })
+                .match(FightReport.class, x -> {
+                    log.debug("玩家[{}]死亡,怪物[{}]战斗结束", sender().path().toString(), modelInfo);
+                    outOfFight();
+                })
                 .matchAny(x -> {
                     log.debug("怪物[{}]战斗中接收到[{}]不做处理", modelInfo, x);
                 })

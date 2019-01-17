@@ -71,9 +71,9 @@ public class Player extends AbstractFSM<State, EventQueue> {
                             return stay();
                         })
                         .event(SearchMsg.class, (x, t) -> {
-                            log.debug("玩家[{}]挂机被怪物[{}]锁定进入战斗!", modelInfo, x.getMonsterRef());
+                            log.debug("玩家[{}]挂机被怪物[{}]发现!", modelInfo, x.getMonsterRef());
                             sender().tell(new PlayerFound(self().path().toString()), self());
-                            return goTo(FIGHTING);
+                            return stay();
                         })
                         .anyEvent((x, t) -> {
                             log.debug("玩家[{}]挂机中接收到[{}]不做处理!", modelInfo, x);
