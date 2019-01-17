@@ -1,4 +1,4 @@
-package fight.msg.monsterMsg;
+package fight.msg;
 
 import scala.Serializable;
 
@@ -7,5 +7,5 @@ import scala.Serializable;
  * description
  * date 2019/1/16
  */
-public class Patrolling implements Serializable {
+public class Status implements Serializable {
 }

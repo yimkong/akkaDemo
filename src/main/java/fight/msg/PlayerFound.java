@@ -1,4 +1,4 @@
-package fight.msg.monsterMsg;
+package fight.msg;
 
 import scala.Serializable;
 

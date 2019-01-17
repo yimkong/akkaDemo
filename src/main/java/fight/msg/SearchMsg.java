@@ -1,4 +1,4 @@
-package fight.msg.monsterMsg;
+package fight.msg;
 
 import scala.Serializable;
 
@@ -9,9 +9,13 @@ import scala.Serializable;
  */
 public class SearchMsg implements Serializable {
     //怪物id
-    private final int id;
+    private final String monsterRef;
 
-    public SearchMsg(int id) {
-        this.id = id;
+    public SearchMsg(String id) {
+        this.monsterRef = id;
+    }
+
+    public String getMonsterRef() {
+        return monsterRef;
     }
 }

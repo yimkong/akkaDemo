@@ -4,10 +4,7 @@ import akka.actor.AbstractFSM;
 import akka.actor.ActorSelection;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import fight.msg.Attack;
-import fight.msg.Disconnected;
-import fight.msg.FightReport;
-import fight.msg.playerMsg.*;
+import fight.msg.*;
 
 import java.util.LinkedList;
 import java.util.Random;
@@ -51,6 +48,10 @@ public class Player extends AbstractFSM<State, EventQueue> {
                             return stay();
                         })
                         .event(OfflineMsg.class, (msg, container) -> stay())
+                        .anyEvent((x, t) -> {
+                            log.debug("玩家[{}]掉线中接收到[{}]不做处理!", modelInfo, x);
+                            return stay();
+                        })
         );
         when(HANG, matchEvent(OfflineMsg.class, (msg, container) -> {
                     log.debug("玩家[{}]从挂机离线!", modelInfo);
@@ -69,6 +70,15 @@ public class Player extends AbstractFSM<State, EventQueue> {
                             sender().tell(stateName().toString(), self());
                             return stay();
                         })
+                        .event(SearchMsg.class, (x, t) -> {
+                            log.debug("玩家[{}]挂机被怪物[{}]锁定进入战斗!", modelInfo, x.getMonsterRef());
+                            sender().tell(new PlayerFound(self().path().toString()), self());
+                            return goTo(FIGHTING);
+                        })
+                        .anyEvent((x, t) -> {
+                            log.debug("玩家[{}]挂机中接收到[{}]不做处理!", modelInfo, x);
+                            return stay();
+                        })
         );
         when(FIGHTING, matchEvent(OfflineMsg.class, (msg, container) -> {
                     log.debug("玩家[{}]从战斗离线!", modelInfo);
@@ -85,8 +95,10 @@ public class Player extends AbstractFSM<State, EventQueue> {
                             //设置小概率逃跑
                             Random random = new Random();
                             double i = random.nextDouble();
-                            if (i < 0.2) {
+                            if (i < 0.5) {
+                                log.debug("玩家[{}]战斗中逃跑!", modelInfo);
                                 sender().tell(new PlayerEscape(), self());
+                                this.modelInfo = ModelInfo.valueOf(modelInfo);
                                 goTo(HANG);
                             }
                             return stay();
@@ -98,6 +110,10 @@ public class Player extends AbstractFSM<State, EventQueue> {
                         })
                         .event(GetStatus.class, (x, t) -> {
                             sender().tell(stateName().toString(), self());
+                            return stay();
+                        })
+                        .anyEvent((x, t) -> {
+                            log.debug("玩家[{}]战斗中接收到[{}]不做处理!", modelInfo, x);
                             return stay();
                         })
         );

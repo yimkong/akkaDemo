@@ -1,19 +1,18 @@
-package fight.service;
+package fight;
 
 import akka.actor.*;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.japi.pf.ReceiveBuilder;
 import akka.util.Timeout;
+import fight.exception.FatalException;
+import fight.exception.MyRuntimeException;
 import fight.model.ModelInfo;
 import fight.model.Monster;
 import fight.model.Player;
-import fight.model.State;
-import fight.msg.monsterMsg.PlayerFound;
-import fight.msg.monsterMsg.SearchMsg;
-import fight.msg.playerMsg.GetStatus;
-import fight.msg.playerMsg.LoginMsg;
-import fight.msg.playerMsg.OfflineMsg;
+import fight.msg.LoginMsg;
+import fight.msg.OfflineMsg;
+import fight.msg.SearchMsg;
 import scala.PartialFunction;
 import scala.concurrent.duration.Duration;
 import scala.runtime.BoxedUnit;
@@ -22,11 +21,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
-
-import static akka.pattern.Patterns.ask;
-import static scala.compat.java8.FutureConverters.toJava;
 
 /**
  * author yg
@@ -51,14 +46,14 @@ public class FighterSupervisor extends AbstractActor {
         int id = 1;
         String thisRef = context().self().path().toString();
         for (int i = 0; i < pNum; i++) {
-            ActorRef actorRef = context().actorOf(Props.create(Player.class, thisRef, getModelInfo(id, 50)));
-            id++;
+            ActorRef actorRef = context().actorOf(Props.create(Player.class, thisRef, getModelInfo(id, 50)), "player" + id);
             pList.add(actorRef);
+            id++;
         }
         for (int i = 0; i < mNum; i++) {
-            ActorRef actorRef = context().actorOf(Props.create(Monster.class, thisRef, getModelInfo(id, 200)));
-            id++;
+            ActorRef actorRef = context().actorOf(Props.create(Monster.class, thisRef, getModelInfo(id, 200)), "monster" + id);
             mList.add(actorRef);
+            id++;
         }
 
         List<Object> objList = new LinkedList<>();
@@ -83,26 +78,16 @@ public class FighterSupervisor extends AbstractActor {
     }
 
     private Object getModelInfo(int id, int attackMax) {
-        return new ModelInfo(id, 1000, new Random().nextInt(attackMax), 1000);
+        Random random = new Random();
+        return new ModelInfo(id, 1000, 40 + random.nextInt(attackMax), 1000);
     }
 
     @Override
     public PartialFunction<Object, BoxedUnit> receive() {
         return ReceiveBuilder
-                .match(SearchMsg.class, msg -> {
-                    ActorRef sender = sender();
-                    ActorRef self = self();
+                .match(SearchMsg.class, msg -> {//转发给玩家actor
                     for (ActorRef actorRef : pList) {
-                        CompletionStage completionStage = toJava(ask(actorRef, new GetStatus(), Timeout.apply(500, TimeUnit.MILLISECONDS)));
-                        completionStage.handle((m, t) -> {
-                            if (m instanceof String) {
-                                if (!m.equals(State.HANG.toString())) {
-                                    return null;
-                                }
-                                sender.tell(new PlayerFound(actorRef.path().toString()), self);
-                            }
-                            return null;
-                        });
+                        actorRef.forward(msg, context());
                     }
                 })
                 .matchAny(x -> {
@@ -114,6 +99,15 @@ public class FighterSupervisor extends AbstractActor {
     public SupervisorStrategy supervisorStrategy() {
         return new OneForOneStrategy(5, Duration.create("1 minute"),
                 akka.japi.pf.DeciderBuilder
-                        .matchAny(e -> SupervisorStrategy.escalate()).build());
+                        .match(FatalException.class, e -> {//销毁掉重启一个actor
+                            log.error("监督者收到[{}]致命异常,重启actor", e.getRef());
+                            return SupervisorStrategy.restart();
+                        })
+                        .match(FatalException.class, e -> SupervisorStrategy.stop())//暂停工作
+                        .match(MyRuntimeException.class, e -> {//继续工作
+                            log.error("监督者收到[{}]运行时异常,继续工作", e.getRef());
+                            return SupervisorStrategy.resume();
+                        })
+                        .matchAny(e -> SupervisorStrategy.escalate()).build());//向上级反馈
     }
 }

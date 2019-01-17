@@ -5,17 +5,14 @@ import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.japi.pf.ReceiveBuilder;
 import akka.util.Timeout;
-import fight.msg.Attack;
-import fight.msg.Disconnected;
-import fight.msg.FightReport;
-import fight.msg.monsterMsg.Patrolling;
-import fight.msg.monsterMsg.PlayerFound;
-import fight.msg.monsterMsg.SearchMsg;
-import fight.msg.playerMsg.PlayerEscape;
+import fight.exception.FatalException;
+import fight.exception.MyRuntimeException;
+import fight.msg.*;
 import scala.PartialFunction;
 import scala.concurrent.duration.Duration;
 import scala.runtime.BoxedUnit;
 
+import java.util.Random;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
@@ -31,6 +28,7 @@ public class Monster extends AbstractActor {
     protected final LoggingAdapter log = Logging.getLogger(context().system(), this);
     public static final long reviveTime = 3000;
     public static final int attackInterval = 1000;
+    Random random = new Random();
 
     //巡逻
     private PartialFunction<Object, BoxedUnit> patrol;
@@ -41,11 +39,11 @@ public class Monster extends AbstractActor {
 
     private ModelInfo modelInfo;
     private ActorSelection fighterSup;
-
     private Cancellable fightScheduler;
 
     @Override
     public void preStart() {//开启调度器
+        System.err.println(self().path().toString() + "启动");
         schedulePatrol();
     }
 
@@ -69,11 +67,17 @@ public class Monster extends AbstractActor {
         patrol = ReceiveBuilder.
                 match(Patrolling.class, x -> {
                     log.debug("怪物[{}]巡逻中", modelInfo);
-                    CompletionStage<Object> completionStage = toJava(ask(fighterSup, new SearchMsg(modelInfo.getId()), Timeout.apply(500, TimeUnit.MILLISECONDS)));
+                    //巡逻时小概率致命异常
+                    double nextDouble = random.nextDouble();
+                    if (nextDouble < 0.1) {
+                        System.err.println(self().path().toString() + "抛出致命异常");
+                        throw new FatalException(self().path().toString());
+                    }
+                    CompletionStage<Object> completionStage = toJava(ask(fighterSup, new SearchMsg(self().path().toString()), Timeout.apply(500, TimeUnit.MILLISECONDS)));
                     completionStage.handle((msg, t) -> {
                         if (msg != null) {
                             if (msg instanceof PlayerFound) {//发现敌人并攻击
-                                log.debug("怪物发现敌人[{}]进入战斗状态", modelInfo);
+                                log.debug("怪物[{}]发现敌人[{}]进入战斗状态", modelInfo, ((PlayerFound) msg).getPlayerRef());
                                 context().become(fighting);
                                 self().forward(msg, context());
                                 beginAttack(((PlayerFound) msg).getPlayerRef());
@@ -85,7 +89,7 @@ public class Monster extends AbstractActor {
                     });
                 })
                 .match(Attack.class, x -> {
-                    log.debug("怪物巡逻状态[{}]被攻击", modelInfo);
+                    log.debug("怪物巡逻状态[{}]被[{}]攻击", modelInfo, sender().path().toString());
                     context().become(fighting);
                     boolean ifDead = beAttacked(modelInfo, x);
                     if (ifDead) {
@@ -99,28 +103,31 @@ public class Monster extends AbstractActor {
                     }
                 })
                 .matchAny(x -> {
-                    log.debug("怪物[{}]巡逻中接收到未处理消息[{}]", modelInfo, x);
+                    log.debug("怪物[{}]巡逻中接收到消息[{}]不做处理", modelInfo, x);
                 })
                 .build();
 
         fighting = ReceiveBuilder.
                 match(Attack.class, x -> {
                     beAttacked(modelInfo, x);
-                    log.debug("怪物[{}]被攻击", modelInfo);
+                    log.debug("怪物[{}]被[{}]攻击", modelInfo, sender().path().toString());
+                    //小概率出现运行时异常
+                    double v = random.nextDouble();
+                    if (v < 0.3) {
+                        System.err.println(self().path().toString() + "抛出运行时异常");
+                        throw new MyRuntimeException(self().path().toString());
+                    }
                 })
                 .match(PlayerEscape.class, x -> {
                     outOfFight();
-                    log.debug("玩家逃离,怪物[{}]继续巡逻", modelInfo);
+                    log.debug("玩家[{}]逃离,怪物[{}]继续巡逻", sender().path().toString(), modelInfo);
                 })
                 .match(Disconnected.class, x -> {
                     outOfFight();
-                    log.debug("玩家掉线,怪物[{}]继续巡逻", modelInfo);
-                })
-                .match(PlayerFound.class, x -> {
-                    log.debug("怪物[{}]战斗中发现敌人[{}]", modelInfo, x.getPlayerRef());
+                    log.debug("玩家[{}]掉线,怪物[{}]继续巡逻", sender().path().toString(), modelInfo);
                 })
                 .matchAny(x -> {
-                    log.debug("怪物[{}]战斗中接收到未处理消息[{}]", modelInfo, x);
+                    log.debug("怪物[{}]战斗中接收到[{}]不做处理", modelInfo, x);
                 })
                 .build();
 
@@ -131,7 +138,7 @@ public class Monster extends AbstractActor {
                     goPatrol();
                 })
                 .matchAny(x -> {
-                    log.debug("怪物[{}]正在复活接收到未处理消息[{}]", modelInfo, x);
+                    log.debug("怪物[{}]正在复活接收到消息[{}]不做处理", modelInfo, x);
                 })
                 .build();
         receive(patrol);

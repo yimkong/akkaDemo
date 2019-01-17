@@ -1,4 +1,4 @@
-package fight.msg.playerMsg;
+package fight.msg;
 
 import scala.Serializable;
 
