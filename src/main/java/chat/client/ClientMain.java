@@ -35,32 +35,6 @@ public class ClientMain {
         ActorRef receptionist = system.actorOf(ClusterClient.defaultProps(initialContacts), "client"); //客户端节点
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         ExecutorService service = Executors.newSingleThreadExecutor();
-        /*Timeout timeout1 = new Timeout(500, TimeUnit.MILLISECONDS);
-        service.submit(new Runnable() {//轮询,最差的方法
-            @Override
-            public void run() {
-                long time = new Date().getTime();
-                int num = 0;
-                while (true) {
-                    while ((new Date().getTime() - time) < 500) {
-                        Thread.yield();
-                    }
-                    time = new Date().getTime();
-                    ClusterClient.Send msg = new ClusterClient.Send("/user/workers", new SimpleMsg.RequestMsg(), false);
-                    Future f = Patterns.ask(receptionist, msg, timeout1);
-                    List<MsgData> result = null;
-                    try {
-                        result = (List<MsgData>) Await.result(f, timeout1.duration());
-                    } catch (Exception e) {
-                        continue;
-                    }
-                    if (!result.isEmpty() || result.size() != num) {
-                        System.out.println("result: " + result);
-                        num = result.size();
-                    }
-                }
-            }
-        });*/
         ActorRef player = system.actorOf(Props.create(Player.class), "player");
         //注册客户端
         final String addr = getAddr();
