@@ -51,7 +51,7 @@ public class Monster extends AbstractActor {
     private void schedulePatrol() {
         ActorRef self = self();
         ActorSystem system = context().system();
-        system.scheduler().scheduleOnce(Duration.apply(1000, TimeUnit.MILLISECONDS),
+        system.scheduler().scheduleOnce(Duration.apply(2000, TimeUnit.MILLISECONDS),
                 new Runnable() {
                     @Override
                     public void run() {
