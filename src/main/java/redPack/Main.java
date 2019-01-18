@@ -37,6 +37,7 @@ public class Main {
                 next.tell(new GetRequest(), ActorRef.noSender());
             }
         }
+        System.err.println("等待异步抢红包完成");
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
