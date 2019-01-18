@@ -1,6 +1,7 @@
 package chat.msg;
 
-import java.io.Serializable;
+
+import scala.Serializable;
 
 /**
  * author yg

@@ -1,13 +1,13 @@
 package chat.msg;
 
-import java.io.Serializable;
+import scala.Serializable;
 
 /**
  * author yg
  * description 服务端向客户端
  * date 2019/1/15
  */
-public class S2CMsgs {
+public class S2CMsgs implements Serializable {
 
     /**
      * author yg

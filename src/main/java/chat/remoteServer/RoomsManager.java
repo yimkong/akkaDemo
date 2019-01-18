@@ -70,7 +70,7 @@ public class RoomsManager extends AbstractActor {
                     registerClient(clientAddress);
                 })
                 .match(S2CMsgs.NoticeRegisterClient.class, msg -> {//记录客户端
-                    System.err.println("收到");
+                    System.err.println("收到其他节点的注册客户端消息");
                     addClient(msg.getActorRef());
                 })
                 .match(C2SMsgs.MsgData.class, msg -> {
@@ -83,7 +83,7 @@ public class RoomsManager extends AbstractActor {
 
     private void registerClient(String clientAddress) {
         ActorSystem system = getContext().system();
-        System.err.println("通知" + JSONObject.toJSON(serverActorPathSet));
+        System.err.println("通知所有节点注册客户端" + JSONObject.toJSON(serverActorPathSet));
         for (String path : serverActorPathSet) {
             system.actorSelection(path).tell(new S2CMsgs.NoticeRegisterClient(clientAddress), self());
         }
